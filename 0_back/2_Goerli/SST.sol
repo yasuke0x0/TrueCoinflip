@@ -1,4 +1,6 @@
 /**
+https://goerli.etherscan.io/address/0x320fe8a26bed9f1e11d88e0c81e4acf85af562f1
+
  *Submitted for verification at Etherscan.io on 2023-01-16
 */
 
@@ -192,8 +194,8 @@ contract SamuraiShrine  is Context, IERC20, Ownable {
     uint256 private _previoustaxFee = _taxFee;
 
     mapping(address => bool) public bots; mapping (address => uint256) public _buyMap;
-    address payable private _developmentAddress = payable(0xa62b3e0A750CF9D8EDE958CD4ef0e9f122B93025);
-    address payable private _marketingAddress = payable(0xa62b3e0A750CF9D8EDE958CD4ef0e9f122B93025);
+    address payable private _developmentAddress = payable(0x25D9fFFE004CCc33c629f51F6FF2304f4a45EAd7);
+    address payable private _marketingAddress = payable(0x39FdCb92A48318b1d91D4820fA1CA41033b9CF8A);
 
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapV2Pair;
@@ -217,7 +219,7 @@ contract SamuraiShrine  is Context, IERC20, Ownable {
 
         _rOwned[_msgSender()] = _rTotal;
 
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0xD7ACd2a9FD159E69Bb102A1ca21C9a3e3A5F771B);//
+        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);//
         uniswapV2Router = _uniswapV2Router;
         uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory())
             .createPair(address(this), _uniswapV2Router.WETH());
