@@ -1,5 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+#blockchain
+.deps
+
 # dependencies
 /node_modules
 /.pnp
@@ -10,8 +13,7 @@
 
 # production
 /build
-git remote add origin git@github.com-perso:YasuBlockchain/TrueCoinflip.git
-git push -u origin main
+
 # misc
 .DS_Store
 .env.local
@@ -31,3 +33,5 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+
