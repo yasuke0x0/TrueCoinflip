@@ -41,6 +41,12 @@ TODO
 
 ### Note:
     This contract uses the subscription method, but may be able to use the direct funding method if it is better.
+
+
+    Task 1, get 1 simple modulo function from this and have it ready.
+    Task x, approve before interacting with the contract.
+    Task x, play the game()
+
 */
 
 contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
@@ -52,10 +58,13 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     struct RequestStatus {
         bool fulfilled; 
         bool exists;
+        uint randomness;
         uint256[] randomWords;
     }
 
-    bool public alpha;
+    uint s_randomRange;
+
+    
     mapping(uint256 => RequestStatus) public s_requests; /* requestId --> requestStatus */
     VRFCoordinatorV2Interface COORDINATOR;
 
@@ -84,27 +93,35 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     function requestRandomWords() public onlyOwner returns (uint256 requestId) {
         // Will revert if subscription is not set and funded.
         requestId = COORDINATOR.requestRandomWords(keyHash, s_subscriptionId, requestConfirmations, callbackGasLimit, numWords);
-        s_requests[requestId] = RequestStatus({randomWords: new uint256[](0), exists: true, fulfilled: false});
+        s_requests[requestId] = RequestStatus({randomness: 0, randomWords: new uint256[](0), exists: true, fulfilled: false});
         requestIds.push(requestId);
         emit RequestSent(requestId, numWords);
         return requestId;
     }
     
+    /*
     // Callback function called by Chainlink VRF coordinator.
     function fulfillRandomWords( uint256 _requestId, uint256[] memory _randomWords) internal override {
         require(s_requests[_requestId].exists, "request not found");
-        uint s_randomRange = (_randomWords[0] % 2) + 1;
         s_requests[_requestId].fulfilled = true;
         s_requests[_requestId].randomWords = s_randomRange;
-        alpha = true;
-
         emit RequestFulfilled(_requestId, _randomWords);
     }
+    */
+    
+    function fulfillRandomWords( uint256 _requestId, uint256[] memory _randomWords) internal override {
+    require(s_requests[_requestId].exists, "request not found");
+    s_requests[_requestId].fulfilled = true;
+    s_randomRange = (_randomWords[0] % 2) + 1; // return 0 on not set, 1 on even and 2 uneven.
+    s_requests[_requestId].randomness = s_randomRange;
+    }
 
-    function getRequestStatus(uint256 _requestId) external view returns (bool fulfilled, uint256[] memory randomWords) {
+    
+
+    function getRequestStatus(uint256 _requestId) external view returns (bool fulfilled, uint randomness, uint256[] memory randomWords) {
         require(s_requests[_requestId].exists, "request not found");
         RequestStatus memory request = s_requests[_requestId];
-        return (request.fulfilled, request.randomWords);
+        return (request.fulfilled, request.randomness, request.randomWords);
     }
 }
 

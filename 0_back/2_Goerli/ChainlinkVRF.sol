@@ -1,58 +1,119 @@
-pragma solidity 0.6.2;
+// SPDX-License-Identifier: MIT
+// An example of a consumer contract that relies on a subscription for funding.
+pragma solidity ^0.8.7;
 
-import "https://raw.githubusercontent.com/smartcontractkit/chainlink/develop/contracts/src/v0.6/VRFConsumerBase.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 
-contract Verifiable6SidedDiceRoll is VRFConsumerBase {
-    using SafeMath for uint;
-    
-    bytes32 internal keyHash;
-    uint256 internal fee;
-    
-    event RequestRandomness(
-        bytes32 indexed requestId,
-        bytes32 keyHash,
-        uint256 seed
-    );
-    
-    event RequestRandomnessFulfilled(
-        bytes32 indexed requestId,
-        uint256 randomness
-    );
-    
+/**
+ * Request testnet LINK and ETH here: https://faucets.chain.link/
+ * Find information on LINK Token Contracts and get the latest ETH and LINK faucets here: https://docs.chain.link/docs/link-token-contracts/
+ */
+
+/**
+ * THIS IS AN EXAMPLE CONTRACT THAT USES HARDCODED VALUES FOR CLARITY.
+ * THIS IS AN EXAMPLE CONTRACT THAT USES UN-AUDITED CODE.
+ * DO NOT USE THIS CODE IN PRODUCTION.
+ */
+
+contract VRFv2Consumer is VRFConsumerBaseV2, ConfirmedOwner {
+    event RequestSent(uint256 requestId, uint32 numWords);
+    event RequestFulfilled(uint256 requestId, uint256[] randomWords);
+
+    struct RequestStatus {
+        bool fulfilled; // whether the request has been successfully fulfilled
+        bool exists; // whether a requestId exists
+        uint256[] randomWords;
+    }
+    mapping(uint256 => RequestStatus)
+        public s_requests; /* requestId --> requestStatus */
+    VRFCoordinatorV2Interface COORDINATOR;
+
+    // Your subscription ID.
+    uint64 s_subscriptionId;
+
+    // past requests Id.
+    uint256[] public requestIds;
+    uint256 public lastRequestId;
+
+    // The gas lane to use, which specifies the maximum gas price to bump to.
+    // For a list of available gas lanes on each network,
+    // see https://docs.chain.link/docs/vrf/v2/subscription/supported-networks/#configurations
+    bytes32 keyHash =
+        0x79d3d8832d904592c0bf9818b621522c988bb8b0c05cdc3b15aea1b6e8db0c15;
+
+    // Depends on the number of requested values that you want sent to the
+    // fulfillRandomWords() function. Storing each word costs about 20,000 gas,
+    // so 100,000 is a safe default for this example contract. Test and adjust
+    // this limit based on the network that you select, the size of the request,
+    // and the processing of the callback request in the fulfillRandomWords()
+    // function.
+    uint32 callbackGasLimit = 100000;
+
+    // The default is 3, but you can set this higher.
+    uint16 requestConfirmations = 3;
+
+    // For this example, retrieve 2 random values in one request.
+    // Cannot exceed VRFCoordinatorV2.MAX_NUM_WORDS.
+    uint32 numWords = 1;
+
     /**
-     * @notice Constructor inherits VRFConsumerBase
-     * @dev Ropsten deployment params:
-     * @dev   _vrfCoordinator: 0xf720CF1B963e0e7bE9F58fd471EFa67e7bF00cfb
-     * @dev   _link:           0x20fE562d797A42Dcb3399062AE9546cd06f63280
+     * HARDCODED FOR GOERLI
+     * COORDINATOR: 0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D
      */
-    constructor(address _vrfCoordinator, address _link)
-        VRFConsumerBase(_vrfCoordinator, _link) public
+    constructor(
+        uint64 subscriptionId
+    )
+        VRFConsumerBaseV2(0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D)
+        ConfirmedOwner(msg.sender)
     {
-        vrfCoordinator = _vrfCoordinator;
-        LINK = LinkTokenInterface(_link);
-        keyHash = 0xced103054e349b8dfb51352f0f8fa9b5d20dde3d06f9f43cb2b85bc64b238205; // hard-coded for Ropsten
-        fee = 10 ** 18; // 1 LINK hard-coded for Ropsten
+        COORDINATOR = VRFCoordinatorV2Interface(
+            0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D
+        );
+        s_subscriptionId = subscriptionId;
     }
-    
-    /** 
-     * @notice Requests randomness from a user-provided seed
-     * @dev The user-provided seed is hashed with the current blockhash as an additional precaution.
-     * @dev   1. In case of block re-orgs, the revealed answers will not be re-used again.
-     * @dev   2. In case of predictable user-provided seeds, the seed is mixed with the less predictable blockhash.
-     * @dev This is only an example implementation and not necessarily suitable for mainnet.
-     * @dev You must review your implementation details with extreme care.
-     */
-    function rollDice(uint256 userProvidedSeed) public returns (bytes32 requestId) {
-        require(LINK.balanceOf(address(this)) > fee, "Not enough LINK - fill contract with faucet");
-        uint256 seed = uint256(keccak256(abi.encode(userProvidedSeed, blockhash(block.number)))); // Hash user seed and blockhash
-        bytes32 _requestId = requestRandomness(keyHash, fee, seed);
-        emit RequestRandomness(_requestId, keyHash, seed);
-        return _requestId;
+
+    // Assumes the subscription is funded sufficiently.
+    function requestRandomWords()
+        external
+        onlyOwner
+        returns (uint256 requestId)
+    {
+        // Will revert if subscription is not set and funded.
+        requestId = COORDINATOR.requestRandomWords(
+            keyHash,
+            s_subscriptionId,
+            requestConfirmations,
+            callbackGasLimit,
+            numWords
+        );
+        s_requests[requestId] = RequestStatus({
+            randomWords: new uint256[](0),
+            exists: true,
+            fulfilled: false
+        });
+        requestIds.push(requestId);
+        lastRequestId = requestId;
+        emit RequestSent(requestId, numWords);
+        return requestId;
     }
-    
-    function fulfillRandomness(bytes32 requestId, uint256 randomness) external override {
-        uint256 d6Result = randomness.mod(6).add(1);
-        emit RequestRandomnessFulfilled(requestId, randomness);
+
+    function fulfillRandomWords(
+        uint256 _requestId,
+        uint256[] memory _randomWords
+    ) internal override {
+        require(s_requests[_requestId].exists, "request not found");
+        s_requests[_requestId].fulfilled = true;
+        s_requests[_requestId].randomWords = _randomWords;
+        emit RequestFulfilled(_requestId, _randomWords);
     }
-    
+
+    function getRequestStatus(
+        uint256 _requestId
+    ) external view returns (bool fulfilled, uint256[] memory randomWords) {
+        require(s_requests[_requestId].exists, "request not found");
+        RequestStatus memory request = s_requests[_requestId];
+        return (request.fulfilled, request.randomWords);
+    }
 }
