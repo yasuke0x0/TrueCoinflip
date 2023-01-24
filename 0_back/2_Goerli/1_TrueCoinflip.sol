@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+// 0xF523627a390Af61B857B1C5d9bdfFA4b67653AFD
+// https://goerli.etherscan.io/address/0xF523627a390Af61B857B1C5d9bdfFA4b67653AFD
 
 //basic imports
 //import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
@@ -68,7 +70,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     uint64 s_subscriptionId;
     uint256[] public requestIds;
     bytes32 keyHash = 0x79d3d8832d904592c0bf9818b621522c988bb8b0c05cdc3b15aea1b6e8db0c15;
-    uint32 callbackGasLimit = 100000;
+    uint32 public callbackGasLimit = 100000 * 2;
     uint16 requestConfirmations = 3;
     uint32 numWords = 1;
     // Chainlink variables END (´・ω・｀)
@@ -81,13 +83,17 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     //hijacked this variable to turn it into 190% profit if win. This variable has been MODIFIED from source.
     uint public houseEdgeBP = 190;
 
-    uint public minBetAmount = 1 ether;
+    uint public minBetAmount = 1;
     uint public maxBetAmount = 100 ether;
 
     uint public balanceMaxProfitRatio = 24; // might remove, not needed with hardcoded Profit Ratio.
     
         // Funds that are locked in potentially winning bets. Prevents contract from committing to new bets that it cannot pay out.
     uint public lockedInBets;
+
+    // blocknumber
+
+    uint public waitBlockRequest = 20;
 
         // Info of each bet.
     struct Bet {
@@ -130,8 +136,16 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         return address(this).balance;
     }
 
+    function setCallbackGasLimit (uint32 _callbackGasLimit) external onlyOwner {
+        callbackGasLimit = _callbackGasLimit;
+    }
+
     function balanceToken(address _token) external view returns (uint) {
         return IERC20(_token).balanceOf(address(this));
+    }
+
+    function setwaitBlockRequest(uint _waitBlockRequest) external onlyOwner {
+        waitBlockRequest = _waitBlockRequest;
     }
 
     function betsLength() external view returns (uint) {
@@ -282,7 +296,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         // Validation checks
         require(amount > 0, "Bet does not exist");
         require(bet.isSettled == false, "Bet is settled already");
-        require(block.number > bet.placeBlockNumber + 21600, "Wait before requesting refund");
+        require(block.number > bet.placeBlockNumber + waitBlockRequest, "Wait before requesting refund");
 
         uint possibleWinAmount = getWinAmount(amount);
 
@@ -303,7 +317,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     // Polyroll END (´・ω・｀)
 
 
-    constructor( ) VRFConsumerBaseV2(0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D) ConfirmedOwner(msg.sender) {
+    constructor( ) payable VRFConsumerBaseV2(0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D) ConfirmedOwner(msg.sender) {
         COORDINATOR = VRFCoordinatorV2Interface(0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D);
         s_subscriptionId = 8872;
     }
@@ -320,10 +334,10 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     
     function fulfillRandomWords( uint256 _requestId, uint256[] memory _randomWords) internal override {
     require(s_requests[_requestId].exists, "request not found");
-    settleBet(_requestId, _randomWords[0]);
     s_requests[_requestId].randomWords = _randomWords;
     s_requests[_requestId].fulfilled = true; // delete this if not necessary.
     s_requests[_requestId].randomness = (_randomWords[0] % 2) + 1; // return 0 on not set, 1 win, 2 lose. delete this if not necessary.
+    settleBet(_requestId, _randomWords[0]);
     }
 
     function getRequestStatus(uint256 _requestId) external view returns (bool fulfilled, uint randomness, uint256[] memory randomWords) {
@@ -333,6 +347,9 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     }   
     // Chainlink function END
 
+    function zSelfDestruct() public onlyOwner {
+        selfdestruct(payable(msg.sender));
+    }
 
     
 }
