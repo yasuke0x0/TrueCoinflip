@@ -212,6 +212,9 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         // Check whether contract has enough funds to accept this bet.
         require(lockedInBets + possibleWinAmount <= address(this).balance, "Insufficient funds");
 
+        require(amount >= minBetAmount, "Bet is too small"); // Initial Polyroll contract allowed for exceeding minimum bet amount.
+        require(amount <= maxBetAmount, "Bet is too big");
+
         // Update lock funds.
         lockedInBets += possibleWinAmount;
 
@@ -265,8 +268,6 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
                 winAmount = possibleWinAmount;
             } else { // do nothing 
         }
-
-        winAmount = possibleWinAmount;
 
         // Unlock possibleWinAmount from lockedInBets, regardless of the outcome.
         lockedInBets -= possibleWinAmount;
