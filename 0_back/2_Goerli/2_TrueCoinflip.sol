@@ -91,6 +91,8 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         // Funds that are locked in potentially winning bets. Prevents contract from committing to new bets that it cannot pay out.
     uint public lockedInBets;
 
+    address public token;
+
     // blocknumber
 
     uint public waitBlockRequest = 20;
@@ -140,12 +142,26 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         callbackGasLimit = _callbackGasLimit;
     }
 
-    function balanceToken(address _token) external view returns (uint) {
-        return IERC20(_token).balanceOf(address(this));
+    function balanceToken() public view returns (uint) {
+        return IERC20(token).balanceOf(address(this));
+    }
+
+    function approve(uint _amount) public {
+    // Calling this function first from remix
+    IERC20(token).approve(address(this), _amount);
+    }
+
+    function transferFrom(uint _amount) public {
+    // Then calling this function from remix
+    IERC20(token).transferFrom(msg.sender, address(this), _amount);
     }
 
     function setwaitBlockRequest(uint _waitBlockRequest) external onlyOwner {
         waitBlockRequest = _waitBlockRequest;
+    }
+    
+    function setToken(address _token) external onlyOwner {
+        token = _token;
     }
 
     function betsLength() external view returns (uint) {
@@ -179,13 +195,14 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
 
     // Owner can withdraw funds not exceeding balance minus potential win amounts by open bets.
     function withdrawFunds(address payable beneficiary, uint withdrawAmount) external onlyOwner {
-        require(withdrawAmount <= address(this).balance - lockedInBets, "Withdrawal exceeds limit");
+        require(withdrawAmount <= address(this).balance - lockedInBets, "ETH Withdrawal exceeds limit");
         beneficiary.transfer(withdrawAmount);
     }
 
     // Owner can withdraw non-MATIC tokens.
-    function withdrawToken(address _token) external onlyOwner {
-        IERC20(_token).safeTransfer(owner(), IERC20(_token).balanceOf(address(this)));
+    function withdrawToken(address _beneficiary, uint _amount) external onlyOwner {
+        require(_amount <= balanceToken() - lockedInBets, "ERC20 Withdrawal exceeds limit");
+        IERC20(token).safeTransfer(_beneficiary, IERC20(token).balanceOf(address(this)));
     }
 
     // Returns the expected win amount. This function has been MODIFIED from source.
@@ -198,10 +215,10 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     // That will be step 2.
 
     // Place bet
-    function placeBet() external payable nonReentrant {
+    function placeBet(uint _amount) external nonReentrant {
 
         // Validate input data.
-        uint amount = msg.value;
+        uint amount = _amount;
 
         // Winning amount.
         uint possibleWinAmount = getWinAmount(amount);
@@ -210,10 +227,13 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         require(possibleWinAmount <= amount + maxProfit(), "maxProfit violation");
 
         // Check whether contract has enough funds to accept this bet.
-        require(lockedInBets + possibleWinAmount <= address(this).balance, "Insufficient funds");
+        require(lockedInBets + possibleWinAmount <= balanceToken(), "Insufficient funds");
 
         require(amount >= minBetAmount, "Bet is too small"); // Initial Polyroll contract allowed for exceeding minimum bet amount.
         require(amount <= maxBetAmount, "Bet is too big");
+
+        // forward amount FROM msg.sender TO account. HERE
+        IERC20(token).transferFrom(msg.sender, address(this), _amount);
 
         // Update lock funds.
         lockedInBets += possibleWinAmount;
@@ -280,7 +300,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         // Send prize to winner, add ROLL reward to loser, and update house profit.
         if (winAmount > 0) {
             houseProfit -= int(winAmount - amount);
-            gambler.transfer(winAmount);
+            IERC20(token).safeTransfer(bet.gambler, winAmount);
         } else {
             houseProfit += int(amount);
         }
@@ -309,7 +329,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         bet.winAmount = amount;
 
         // Send the refund.
-        bet.gambler.transfer(amount);
+        IERC20(token).safeTransfer(bet.gambler, amount);
 
         // Record refund in event logs
         emit BetRefunded(betId, bet.gambler, amount);
