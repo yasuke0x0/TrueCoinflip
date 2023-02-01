@@ -338,8 +338,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     s_requests[_requestId].randomWords = _randomWords;
     s_requests[_requestId].fulfilled = true; // delete this if not necessary.
     s_requests[_requestId].randomness = (_randomWords[0] % 2) + 1; // return 0 on not set, 1 win, 2 lose. delete this if not necessary.
-    settleBet(_requestId, _randomWords[0]);
-    }
+https://github.com/YasuBlockchain/TrueCoinflip/blob/main/0_back/2_Goerli/1_TrueCoinflipETH.sol    }
 
     function getRequestStatus(uint256 _requestId) external view returns (bool fulfilled, uint randomness, uint256[] memory randomWords) {
     require(s_requests[_requestId].exists, "request not found");

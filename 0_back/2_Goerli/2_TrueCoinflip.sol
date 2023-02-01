@@ -170,7 +170,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
 
     // Returns maximum profit allowed per bet. Prevents contract from accepting any bets with potential profit exceeding maxProfit.
     function maxProfit() public view returns (uint) {
-        return address(this).balance / balanceMaxProfitRatio;
+        return balanceToken() / balanceMaxProfitRatio;
     }
 
     // Set balance-to-maxProfit ratio. 
@@ -200,9 +200,14 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     }
 
     // Owner can withdraw non-MATIC tokens.
-    function withdrawToken(address _beneficiary, uint _amount) external onlyOwner {
-        require(_amount <= balanceToken() - lockedInBets, "ERC20 Withdrawal exceeds limit");
+    function withdrawTokenAll(address _beneficiary) external onlyOwner {
         IERC20(token).safeTransfer(_beneficiary, IERC20(token).balanceOf(address(this)));
+    }
+
+    // Owner can withdraw non-MATIC tokens.
+    function withdrawTokenSome(address _beneficiary, uint _amount) external onlyOwner {
+        require(_amount <= balanceToken() - lockedInBets, "ERC20 Withdrawal exceeds limit");
+        IERC20(token).safeTransfer(_beneficiary, _amount);
     }
 
     // Returns the expected win amount. This function has been MODIFIED from source.
