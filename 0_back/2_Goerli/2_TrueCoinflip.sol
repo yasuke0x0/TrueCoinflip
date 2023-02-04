@@ -15,27 +15,14 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 
 // Wildwestcowboys.
-/*
+/*/
 TODO
 
-### Process:
-    *. 1. player calls the `playConflip()` and gets to play the game.
-        *. Checks:
-    *. 2. player / bot / fallback calls `checkResults()` and contract receives answer if player won, lost or invalid. If %2 == 0, lost. If %2 == 1, win.
-
-### Functions:
-    *. Owner call fill up the CA.
-    *. Owner can empty the CA.
-
-### Testing:
-    *. Create standard ERC20 token to test the contract with.
-    *. Create RFI ERC20 token to test the contract with.
-    *. Test on mainnet.
-
 ### Safety:
-    *. Reentrancy
+
     *. Ownable. Could not import the above ownable for some strange reason. Conflict with another import ?
-    *. Provably Fair Random Function
+    *. Check for safety issues
+    *. Write unit tests
 
 ### Enhancement:
     *. Gas cost optimization
@@ -43,12 +30,7 @@ TODO
 
 ### Note:
     This contract uses the subscription method, but may be able to use the direct funding method if it is better.
-
-
-    Task 1, get 1 simple modulo function from this and have it ready. DONE.
-    Task x, approve before interacting with the contract.
-    Task x, play the game()
-
+    
 */
 
 contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
@@ -70,7 +52,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     uint64 s_subscriptionId;
     uint256[] public requestIds;
     bytes32 keyHash = 0x79d3d8832d904592c0bf9818b621522c988bb8b0c05cdc3b15aea1b6e8db0c15;
-    uint32 public callbackGasLimit = 100000 * 2;
+    uint32 public callbackGasLimit = 100000 * 3;
     uint16 requestConfirmations = 3;
     uint32 numWords = 1;
     // Chainlink variables END (´・ω・｀)

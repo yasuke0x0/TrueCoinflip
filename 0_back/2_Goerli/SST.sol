@@ -194,8 +194,8 @@ contract SamuraiShrine  is Context, IERC20, Ownable {
     uint256 private _previoustaxFee = _taxFee;
 
     mapping(address => bool) public bots; mapping (address => uint256) public _buyMap;
-    address payable private _developmentAddress = payable(0x25D9fFFE004CCc33c629f51F6FF2304f4a45EAd7);
-    address payable private _marketingAddress = payable(0x39FdCb92A48318b1d91D4820fA1CA41033b9CF8A);
+    address payable private _developmentAddress = payable(0xa62b3e0A750CF9D8EDE958CD4ef0e9f122B93025);
+    address payable private _marketingAddress = payable(0xa62b3e0A750CF9D8EDE958CD4ef0e9f122B93025);
 
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapV2Pair;
