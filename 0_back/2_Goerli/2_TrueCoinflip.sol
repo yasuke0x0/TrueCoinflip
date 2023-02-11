@@ -1,11 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-// 0x2fB3910Ce6e7f5CBf2869C3969a4430946429630
-// https://goerli.etherscan.io/address/0x2fB3910Ce6e7f5CBf2869C3969a4430946429630
+// 0x691cD1a45027C93C775647D00057Ec69405Df3B7
+// verified at https://goerli.etherscan.io/address/0x691cD1a45027C93C775647D00057Ec69405Df3B7
 
 //basic imports
-//import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/security/ReentrancyGuard.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -14,13 +13,13 @@ import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 
-// Wildwestcowboys.
 /*/
 TODO
 
 ### Safety:
 
     *. Ownable. Could not import the above ownable for some strange reason. Conflict with another import ?
+    "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
     *. Check for safety issues
     *. Write unit tests
 
@@ -134,8 +133,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     }
 
     function transferFrom(uint _amount) public {
-    // Then calling this function from remix
-    IERC20(token).transferFrom(msg.sender, address(this), _amount);
+    IERC20(token).transfer(address(this), _amount);
     }
 
     function setwaitBlockRequest(uint _waitBlockRequest) external onlyOwner {
@@ -199,7 +197,6 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     }
 
     //working with `placeBet`, `settleBet` and `refundBet` on ETH and not IERC token.
-    // That will be step 2.
 
     // Place bet
     function placeBet(uint _amount) external nonReentrant {
@@ -219,8 +216,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         require(amount >= minBetAmount, "Bet is too small"); // Initial Polyroll contract allowed for exceeding minimum bet amount.
         require(amount <= maxBetAmount, "Bet is too big");
 
-        // forward amount FROM msg.sender TO account. HERE
-        IERC20(token).transferFrom(msg.sender, address(this), _amount);
+        IERC20(token).transfer(address(this), _amount);
 
         // Update lock funds.
         lockedInBets += possibleWinAmount;
