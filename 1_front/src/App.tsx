@@ -1,23 +1,20 @@
 import React from 'react';
 import './App.css';
-import Header from "./header/header";
 
-import {createBrowserRouter, RouterProvider} from "react-router-dom";
-import Home from "./pages/home/home";
-
-const router = createBrowserRouter([
-    {
-        path: "/",
-        element: <Home />,
-    },
-]);
+import Header from "./pages/Header";
+import AppRoutes from "./routes/AppRoutes";
 
 function App() {
     return <>
-        <Header />
+        {/*Header*/}
+        <Header/>
+
+        {/*Body*/}
         <div className={"p-4"}>
-            <RouterProvider router={router} />
+            <AppRoutes/>
         </div>
+
+        {/*Footer*/}
     </>
 }
 
