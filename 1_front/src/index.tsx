@@ -19,9 +19,8 @@ const root = ReactDOM.createRoot(
 
 
 root.render(
-    <React.StrictMode>
+    <>
         <ToastContainer/>
-
         <QueryClientProvider client={queryClient}>
             <WalletAuthContextProvider>
                 <Web3ContextProvider>
@@ -31,5 +30,5 @@ root.render(
                 </Web3ContextProvider>
             </WalletAuthContextProvider>
         </QueryClientProvider>
-    </React.StrictMode>
+    </>
 );

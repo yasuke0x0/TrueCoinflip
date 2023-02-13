@@ -42,6 +42,7 @@ export default function Login() {
             }
             setIsConnectingWallet(false)
         } catch (e: any) {
+            console.log(e)
             switch (e.code) {
                 case -32002:
                     toast.error("Your wallet is already processing the authentication. Please, check your wallet and try again.")

@@ -3,7 +3,7 @@ export interface BetModel {
     placeBlockNumber: string
     gambler: string
     isSettled: boolean
-    outcome: 0 | 1 | 2 // 0 = ongoing, 1 = win, 2 = loose
+    outcome: "0" | "1" | "2" // 0 = ongoing, 1 = win, 2 = loose
     winAmount: number // in wei
 }
 

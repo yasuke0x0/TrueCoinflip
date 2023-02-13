@@ -26,39 +26,33 @@ export default function Bets() {
 
 
     useEffect(() => {
+        getBets().catch(e => {
+            setErrorLoadingBets(true)
+            toast.error("Something went wront while fetching bets ...")
+            console.error(e)
+        })
+    }, []);
+
+    async function getBets() {
         setIsLoadingBets(true)
-        coinflipContract.methods.betsLength().call({from: walletAuthContext.currentWallet!.address})
-            .then((r: any) => {
-                const betsLength = parseInt(r)
-                if (betsLength > 0) {
-                    Array.from({length: betsLength}, (v, k) => k).map(async index => {
-                        coinflipContract.methods.bets(index).call({from: walletAuthContext.currentWallet!.address})
-                            .then((r: BetModel) => {
-                                setBets((prev) => {
-                                    const newBet: BetModel = {
-                                        amount: r.amount,
-                                        gambler: r.gambler,
-                                        isSettled: r.isSettled,
-                                        outcome: r.outcome,
-                                        placeBlockNumber: r.placeBlockNumber,
-                                        winAmount: r.winAmount
-                                    }
-                                    return [...prev, newBet]
-                                })
-                            })
-                            .catch(() => {
-                                setErrorLoadingBets(true)
-                            })
-                    })
-                }
-            })
-            .catch(() => {
-                setErrorLoadingBets(true)
-            })
-            .finally(() => setIsLoadingBets(false))
+        setBets([])
+        setErrorLoadingBets(false)
+        let listOfBets: BetModel[] = []
+        const betsLength = await coinflipContract.methods.betsLength().call({from: walletAuthContext.currentWallet!.address})
 
-    }, [walletAuthContext.currentWallet!.address]);
-
+        if (betsLength > 0) {
+            Array.from({length: betsLength}, (v, k) => k).map(async index => {
+                const bet: BetModel = await coinflipContract.methods.bets(index).call({from: walletAuthContext.currentWallet!.address})
+                listOfBets.unshift(bet)
+                setBets((prev) => {
+                    prev.unshift(bet)
+                    return [...prev]
+                })
+            })
+        }
+        setIsLoadingBets(false)
+        return listOfBets
+    }
 
     // Start betting!
     const handlePlay = async () => {
@@ -71,7 +65,17 @@ export default function Bets() {
             // Call Play method from the contract
             coinflipContract.methods.placeBet(amountWei).send({from: walletAuthContext.currentWallet!.address, gas: 3000000})
                 .then((r: any) => {
-                    const {amount, betId, gambler} = r.events.BetPlaced.returnValues
+                    console.log(r)
+                    const {betId} = r.events.BetPlaced.returnValues
+                    coinflipContract.methods.bets(betId).call({from: walletAuthContext.currentWallet!.address})
+                        .then((r: BetModel) => {
+                            setBets((prev) => {
+                                prev.unshift(r)
+                                return [...prev]
+                            })
+                            toast.info("Your bet has been placed! Wait 1 min for the result.")
+                        })
+
                     /*// @ts-ignore
                     const {winner} = r.events.Status
                     if (winner === true) {
@@ -131,9 +135,7 @@ export default function Bets() {
                             <tr>
                                 <th>Address</th>
                                 <th>Block Number</th>
-                                <th>Block Timestamp</th>
-                                <th>Bet</th>
-                                <th>Prize</th>
+                                <th>Bet in WEI</th>
                                 <th>Result</th>
                             </tr>
                             </thead>
@@ -142,10 +144,12 @@ export default function Bets() {
                                 <tr key={key}>
                                     <td>{bet.gambler}</td>
                                     <td>{bet.placeBlockNumber}</td>
-                                    <td>{bet.placeBlockNumber}</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
+                                    <td>{bet.amount}</td>
+                                    <td>
+                                        {bet.outcome === "0" && <span className="badge bg-warning">Ongoing</span>}
+                                        {bet.outcome === "1" && <span className="badge bg-success">Won</span>}
+                                        {bet.outcome === "2" && <span className="badge bg-danger">Lost</span>}
+                                    </td>
                                     {/*<td>{bet.bet}</td>*/}
                                     {/*<td>{bet.prize}</td>*/}
                                     {/*<td>{bet.winner ? <i className={"fas fa-check-circle text-success"}/> : <i className={"fas fa-times-circle text-danger"}/>}</td>*/}
