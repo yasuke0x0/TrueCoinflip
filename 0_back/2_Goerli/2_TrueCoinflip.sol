@@ -8,6 +8,9 @@ pragma solidity ^0.8.0;
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/security/ReentrancyGuard.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/utils/SafeERC20.sol";
 
+//dummy import
+import "./DummyERC20.sol";
+
 //VRF imports
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
@@ -35,25 +38,14 @@ TODO
 contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    // Chainlink variables START (´・ω・｀)
-    event RequestSent(uint256 requestId, uint32 numWords);
-    event RequestFulfilled(uint256 requestId, uint256[] randomWords);
+    // Chainlink (´・ω・｀)
 
-    struct RequestStatus {
-        bool fulfilled; 
-        bool exists;
-        uint randomness;
-        uint256[] randomWords;
-    }
-    
-    mapping(uint256 => RequestStatus) public s_requests; 
     VRFCoordinatorV2Interface COORDINATOR;
-    uint64 s_subscriptionId;
-    uint256[] public requestIds;
     bytes32 keyHash = 0x79d3d8832d904592c0bf9818b621522c988bb8b0c05cdc3b15aea1b6e8db0c15;
+    uint32 s_subscriptionId;
     uint32 public callbackGasLimit = 100000 * 3;
     uint16 requestConfirmations = 3;
-    uint32 numWords = 1;
+    uint8 numWords = 1;
     // Chainlink variables END (´・ω・｀)
 
 
@@ -76,7 +68,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
 
     // blocknumber
 
-    uint public waitBlockRequest = 20;
+    uint16 public waitBlockRequest = 20;
 
         // Info of each bet.
     struct Bet {
@@ -136,7 +128,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     IERC20(token).transfer(address(this), _amount);
     }
 
-    function setwaitBlockRequest(uint _waitBlockRequest) external onlyOwner {
+    function setwaitBlockRequest(uint16 _waitBlockRequest) external onlyOwner {
         waitBlockRequest = _waitBlockRequest;
     }
     
@@ -223,7 +215,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
 
         // Request random number from Chainlink VRF. Store requestId for validation checks later.
         // Commenting the following line out, not sure how to resolve this conflict.
-        uint256 requestIdMod = requestRandomWords();
+        uint256 requestIdMod = COORDINATOR.requestRandomWords(keyHash, s_subscriptionId, requestConfirmations, callbackGasLimit, numWords);
 
         // Map requestId to bet ID.
         betMap[requestIdMod] = bets.length;
@@ -321,35 +313,23 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     // Polyroll END (´・ω・｀)
 
 
-    constructor( ) payable VRFConsumerBaseV2(0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D) ConfirmedOwner(msg.sender) {
+    constructor(uint32 _s_subscriptionId) payable VRFConsumerBaseV2(0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D) ConfirmedOwner(msg.sender) {
         COORDINATOR = VRFCoordinatorV2Interface(0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D);
-        s_subscriptionId = 8872;
+        s_subscriptionId = _s_subscriptionId;
+        create();
     }
 
-    // Chainlink function START
-    function requestRandomWords() public onlyOwner returns (uint256 requestId) {
-        // Will revert if subscription is not set and funded.
-        requestId = COORDINATOR.requestRandomWords(keyHash, s_subscriptionId, requestConfirmations, callbackGasLimit, numWords);
-        s_requests[requestId] = RequestStatus({randomness: 0, randomWords: new uint256[](0), exists: true, fulfilled: false});
-        requestIds.push(requestId);
-        emit RequestSent(requestId, numWords);
-        return requestId;
+    function create() public {
+        ERC20 dummyERC20 = new ERC20("DummyERC20", "XYZ");
+        token = address(dummyERC20);
     }
+
+    // Chainlink function
     
     function fulfillRandomWords( uint256 _requestId, uint256[] memory _randomWords) internal override {
-    require(s_requests[_requestId].exists, "request not found");
-    s_requests[_requestId].randomWords = _randomWords;
-    s_requests[_requestId].fulfilled = true; // delete this if not necessary.
-    s_requests[_requestId].randomness = (_randomWords[0] % 2) + 1; // return 0 on not set, 1 win, 2 lose. delete this if not necessary.
     settleBet(_requestId, _randomWords[0]);
     }
 
-    function getRequestStatus(uint256 _requestId) external view returns (bool fulfilled, uint randomness, uint256[] memory randomWords) {
-    require(s_requests[_requestId].exists, "request not found");
-    RequestStatus memory request = s_requests[_requestId];
-    return (request.fulfilled, request.randomness, request.randomWords);
-    }   
-    // Chainlink function END
 
     function zSelfDestruct() public onlyOwner {
         selfdestruct(payable(msg.sender));
@@ -357,5 +337,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
 
     
 }
+
+
 
 
