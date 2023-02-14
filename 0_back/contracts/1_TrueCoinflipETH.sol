@@ -5,7 +5,6 @@ pragma solidity ^0.8.0;
 // https://goerli.etherscan.io/address/0x2fB3910Ce6e7f5CBf2869C3969a4430946429630
 
 //basic imports
-//import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/security/ReentrancyGuard.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -14,41 +13,6 @@ import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 
-/*
-TODO
-
-### Process:
-    *. 1. player calls the `playConflip()` and gets to play the game.
-        *. Checks:
-    *. 2. player / bot / fallback calls `checkResults()` and contract receives answer if player won, lost or invalid. If %2 == 0, lost. If %2 == 1, win.
-
-### Functions:
-    *. Owner call fill up the CA.
-    *. Owner can empty the CA.
-
-### Testing:
-    *. Create standard ERC20 token to test the contract with.
-    *. Create RFI ERC20 token to test the contract with.
-    *. Test on mainnet.
-
-### Safety:
-    *. Reentrancy
-    *. Ownable. Could not import the above ownable for some strange reason. Conflict with another import ?
-    *. Provably Fair Random Function
-
-### Enhancement:
-    *. Gas cost optimization
-    *. Better code structure
-
-### Note:
-    This contract uses the subscription method, but may be able to use the direct funding method if it is better.
-
-
-    Task 1, get 1 simple modulo function from this and have it ready. DONE.
-    Task x, approve before interacting with the contract.
-    Task x, play the game()
-
-*/
 
 contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -70,8 +34,9 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     uint256[] public requestIds;
     bytes32 keyHash = 0x79d3d8832d904592c0bf9818b621522c988bb8b0c05cdc3b15aea1b6e8db0c15;
     uint32 public callbackGasLimit = 100000 * 2;
-    uint16 requestConfirmations = 3;
     uint32 numWords = 1;
+    uint16 requestConfirmations = 3;
+
     // Chainlink variables END (´・ω・｀)
 
 
