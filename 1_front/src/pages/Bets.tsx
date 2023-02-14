@@ -65,14 +65,13 @@ export default function Bets() {
             // Call Play method from the contract
             coinflipContract.methods.placeBet(amountWei).send({from: walletAuthContext.currentWallet!.address, gas: 3000000})
                 .then((r: any) => {
-                    console.log(r)
                     const {betId} = r.events.BetPlaced.returnValues
                     coinflipContract.methods.bets(betId).call({from: walletAuthContext.currentWallet!.address})
                         .then((r: BetModel) => {
-                            setBets((prev) => {
+                          /*  setBets((prev) => {
                                 prev.unshift(r)
                                 return [...prev]
-                            })
+                            })*/
                             toast.info("Your bet has been placed! Wait 1 min for the result.")
                         })
 
@@ -99,6 +98,12 @@ export default function Bets() {
 
 
     }
+
+    coinflipContract.events.BetPlaced(() => {})
+        .on('data', (event: any) => console.log('data', event))
+        .on('changed', (changed: any) => console.log('changed', changed))
+        .on('error', (err: any) => console.log('error', err))
+        .on('connected', (str: any) => console.log('connected', str))
 
     return <>
         <div className="container mb-5" style={{position: 'relative'}}>
