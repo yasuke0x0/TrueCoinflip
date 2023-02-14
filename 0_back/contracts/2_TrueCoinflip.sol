@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-// 0x691cD1a45027C93C775647D00057Ec69405Df3B7
-// verified at https://goerli.etherscan.io/address/0x691cD1a45027C93C775647D00057Ec69405Df3B7
+// 0x1cb44424896e1473bac6629dfc6976956d516d16
+// verified at https://goerli.etherscan.io/address/0x1cb44424896e1473bac6629dfc6976956d516d16
 
 //basic imports
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/security/ReentrancyGuard.sol";
@@ -52,6 +52,9 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     // Polyroll START (´・ω・｀)
     // Each bet is deducted 100 basis points (1%) in favor of the house
     // uint public houseEdgeBP = 100;
+
+    //public token variable
+    ERC20 public dummyERC20;
 
     //hijacked this variable to turn it into 190% profit if win. This variable has been MODIFIED from source.
     uint public houseEdgeBP = 190;
@@ -320,9 +323,17 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     }
 
     function create() public {
-        ERC20 dummyERC20 = new ERC20("DummyERC20", "XYZ");
+        dummyERC20 = new ERC20("DummyERC20", "XYZ");
         token = address(dummyERC20);
     }
+
+    function mintToken(uint _amount) public {
+        dummyERC20._mint(msg.sender, _amount);
+        }
+
+    function mintTokenToContract(uint _amount) public {
+        dummyERC20._mint(address(this), _amount);
+        }
 
     // Chainlink function
     
