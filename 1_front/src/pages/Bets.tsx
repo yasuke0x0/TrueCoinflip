@@ -6,7 +6,7 @@ import {CONTRACT_ADRESS} from "../constants";
 import {AbiItem} from "web3-utils";
 import {Contract} from "web3-eth-contract";
 import {Spinner} from "react-bootstrap";
-import {BetModel, WalletModel} from "../models";
+import {BetModel, BetPlacedEventModel, BetSettledEventModel, WalletModel} from "../models";
 import {WalletAuthContext} from "../context/walletAuthContext/WalletAuthContext";
 import {Web3Context} from "../context/web3Context/Web3Context";
 
@@ -31,7 +31,36 @@ export default function Bets() {
             toast.error("Something went wront while fetching bets ...")
             console.error(e)
         })
+        listenToBetPlacedEvent()
+        listenToBetSettledEvent()
     }, []);
+
+
+    function listenToBetPlacedEvent() {
+        coinflipContract.events.BetPlaced()
+            .on('data', async (event: any) => {
+                console.log('Bet placed', event)
+                const {betId}: BetPlacedEventModel = event.returnValues
+                const bet: BetModel = await coinflipContract.methods.bets(betId).call({from: walletAuthContext.currentWallet!.address})
+                setBets((prev) => {
+                    prev.unshift(bet)
+                    return [...prev]
+                })
+            })
+    }
+
+    function listenToBetSettledEvent() {
+        coinflipContract.events.BetSettled()
+            .on('data', async (event: any) => {
+                console.log('Bet settled', event)
+                const {betId}: BetSettledEventModel = event.returnValues
+                const bet: BetModel = await coinflipContract.methods.bets(betId).call({from: walletAuthContext.currentWallet!.address})
+                setBets(prev => {
+                    prev[parseInt(betId)] = bet
+                    return [...prev]
+                })
+            })
+    }
 
     async function getBets() {
         setIsLoadingBets(true)
@@ -68,10 +97,10 @@ export default function Bets() {
                     const {betId} = r.events.BetPlaced.returnValues
                     coinflipContract.methods.bets(betId).call({from: walletAuthContext.currentWallet!.address})
                         .then((r: BetModel) => {
-                          /*  setBets((prev) => {
-                                prev.unshift(r)
-                                return [...prev]
-                            })*/
+                            /*  setBets((prev) => {
+                                  prev.unshift(r)
+                                  return [...prev]
+                              })*/
                             toast.info("Your bet has been placed! Wait 1 min for the result.")
                         })
 
@@ -98,12 +127,6 @@ export default function Bets() {
 
 
     }
-
-    coinflipContract.events.BetPlaced(() => {})
-        .on('data', (event: any) => console.log('data', event))
-        .on('changed', (changed: any) => console.log('changed', changed))
-        .on('error', (err: any) => console.log('error', err))
-        .on('connected', (str: any) => console.log('connected', str))
 
     return <>
         <div className="container mb-5" style={{position: 'relative'}}>

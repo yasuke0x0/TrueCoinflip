@@ -1,5 +1,5 @@
 export interface BetModel {
-    amount: number
+    amount: number // in wei
     placeBlockNumber: string
     gambler: string
     isSettled: boolean
@@ -11,3 +11,18 @@ export interface WalletModel {
     address: string
     balance: number
 }
+
+export interface BetPlacedEventModel{
+    amount: string
+    betId: string
+    gambler: string
+}
+
+export interface BetSettledEventModel{
+    betId: string
+    gambler: string
+    amount: number
+    outcome: | "1" | "2"
+    winAmount: number
+}
+
