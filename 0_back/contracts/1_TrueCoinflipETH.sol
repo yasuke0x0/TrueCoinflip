@@ -278,24 +278,6 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
 
     }
 
-    function addVRFConsumer() public {
-        COORDINATOR.addConsumer(s_subscriptionId, address(this));
-    }
-
-    function manuallyAddVRFConsumer(uint64 _subId) public {
-        COORDINATOR.addConsumer(_subId, address(this));
-    }
-
-    function addVRFCall () public {
-        VRFCoordinatorV2Interface yummy = VRFCoordinatorV2Interface(0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D);
-        yummy.addConsumer(8872, address(this));
-    }
-
-    function addVRFCallManually (uint64 _subId) public {
-        VRFCoordinatorV2Interface yummy = VRFCoordinatorV2Interface(0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D);
-        yummy.addConsumer(_subId, address(this));
-    }
-
     // Chainlink function
     function fulfillRandomWords( uint256 _requestId, uint256[] memory _randomWords) internal override {
         settleBet(_requestId, _randomWords[0]);
