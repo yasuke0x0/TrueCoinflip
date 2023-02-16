@@ -1,6 +1,6 @@
 # Ethereum Coin Flip Game
 
-A simple casino game based on the Ethereum blockchain, featuring a Solidity smart contract (CoinFlip.sol) and a web-based interface for interaction.
+A simple casino game based on the Ethereum blockchain, featuring a Solidity smart contract (TrueCoinflip.sol) and a web-based interface for interaction.
 
 ![screenshot](screenshot.png)
 

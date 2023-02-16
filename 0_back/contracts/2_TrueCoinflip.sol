@@ -16,30 +16,14 @@ import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 
-/*/
-TODO
 
-### Safety:
+// Note: this contract uses the chainlink vrf subscription method
 
-    *. Ownable. Could not import the above ownable for some strange reason. Conflict with another import ?
-    "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
-    *. Check for safety issues
-    *. Write unit tests
-
-### Enhancement:
-    *. Gas cost optimization
-    *. Better code structure
-
-### Note:
-    This contract uses the subscription method, but may be able to use the direct funding method if it is better.
-    
-*/
 
 contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // Chainlink (´・ω・｀)
-
     VRFCoordinatorV2Interface COORDINATOR;
     bytes32 keyHash = 0x79d3d8832d904592c0bf9818b621522c988bb8b0c05cdc3b15aea1b6e8db0c15;
     uint32 s_subscriptionId;
@@ -50,8 +34,6 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
 
 
     // Polyroll START (´・ω・｀)
-    // Each bet is deducted 100 basis points (1%) in favor of the house
-    // uint public houseEdgeBP = 100;
 
     //public token variable
     ERC20 public dummyERC20;
@@ -61,52 +43,33 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
 
     uint public minBetAmount = 1;
     uint public maxBetAmount = 100 ether;
-
-    uint public balanceMaxProfitRatio = 24; // might remove, not needed with hardcoded Profit Ratio.
-    
-        // Funds that are locked in potentially winning bets. Prevents contract from committing to new bets that it cannot pay out.
+    uint public balanceMaxProfitRatio = 24;
     uint public lockedInBets;
 
     address public token;
-
-    // blocknumber
 
     uint16 public waitBlockRequest = 20;
 
         // Info of each bet.
     struct Bet {
-        // Wager amount in wei.
         uint amount;
-        // Block number of placeBet tx.
         uint placeBlockNumber;
-        // Address of a gambler, used to pay out winning bets.
         address payable gambler;
-        // Status of bet settlement.
-        bool isSettled;
-        // Outcome of bet.
-        uint outcome;
-        // Win amount.
+        bool isSettled; 
+        uint outcome; // Outcome of bet. 0 = isSettled false, 1 = win, 2 = loss
         uint winAmount;
     }
 
-    // Array of bets
     Bet[] public bets;
-    // mapping(uint256 => Bet) public betMap; // Might use this but the below line was used in source, will check.
-
-
-    // Mapping requestId returned by Chainlink VRF to bet Id.
     mapping(uint256 => uint) public betMap;
 
 
-    // Signed integer used for tracking house profit since inception.
     int public houseProfit;
 
-    // Events
     event BetPlaced(uint indexed betId, address indexed gambler, uint amount);
     event BetSettled(uint indexed betId, address indexed gambler, uint amount, uint outcome, uint winAmount);
     event BetRefunded(uint indexed betId, address indexed gambler, uint amount);
 
-    // used to top up the contract.
     fallback() external payable {}
     receive() external payable {}
 
@@ -122,10 +85,6 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         return IERC20(token).balanceOf(address(this));
     }
 
-    function approve(uint _amount) public {
-    // Calling this function first from remix
-    IERC20(token).approve(address(this), _amount);
-    }
 
     function transferFrom(uint _amount) public {
     IERC20(token).transfer(address(this), _amount);
@@ -168,13 +127,7 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         houseEdgeBP = _houseEdgeBP;
     }
 
-    // Owner can withdraw funds not exceeding balance minus potential win amounts by open bets.
-    function withdrawFunds(address payable beneficiary, uint withdrawAmount) external onlyOwner {
-        require(withdrawAmount <= address(this).balance - lockedInBets, "ETH Withdrawal exceeds limit");
-        beneficiary.transfer(withdrawAmount);
-    }
-
-    // Owner can withdraw non-MATIC tokens.
+    // Owner can withdraw non-MATIC tokens. Owner may rug here, need to add a token.balanceOf - lockedInBets check.
     function withdrawTokenAll(address _beneficiary) external onlyOwner {
         IERC20(token).safeTransfer(_beneficiary, IERC20(token).balanceOf(address(this)));
     }
@@ -185,48 +138,34 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         IERC20(token).safeTransfer(_beneficiary, _amount);
     }
 
-    // Returns the expected win amount. This function has been MODIFIED from source.
+    // Returns the expected win amount. This function has been modified from Polyroll.
     function getWinAmount(uint _amount) private view returns (uint winAmount) {
         uint houseEdgeFee = _amount * (houseEdgeBP) / 100;
         winAmount = (houseEdgeFee);
     }
 
-    //working with `placeBet`, `settleBet` and `refundBet` on ETH and not IERC token.
 
-    // Place bet
     function placeBet(uint _amount) external nonReentrant {
 
-        // Validate input data.
         uint amount = _amount;
-
-        // Winning amount.
         uint possibleWinAmount = getWinAmount(amount);
 
-        // Enforce max profit limit. Bet will not be placed if condition is not met.
         require(possibleWinAmount <= amount + maxProfit(), "maxProfit violation");
-
-        // Check whether contract has enough funds to accept this bet.
         require(lockedInBets + possibleWinAmount <= balanceToken(), "Insufficient funds");
-
-        require(amount >= minBetAmount, "Bet is too small"); // Initial Polyroll contract allowed for exceeding minimum bet amount.
+        require(amount >= minBetAmount, "Bet is too small"); 
         require(amount <= maxBetAmount, "Bet is too big");
 
         IERC20(token).transfer(address(this), _amount);
 
-        // Update lock funds.
         lockedInBets += possibleWinAmount;
 
         // Request random number from Chainlink VRF. Store requestId for validation checks later.
-        // Commenting the following line out, not sure how to resolve this conflict.
         uint256 requestIdMod = COORDINATOR.requestRandomWords(keyHash, s_subscriptionId, requestConfirmations, callbackGasLimit, numWords);
 
-        // Map requestId to bet ID.
         betMap[requestIdMod] = bets.length;
 
-        // Record bet in event logs. Placed before pushing bet to array in order to get the correct bets.length.
         emit BetPlaced(bets.length, msg.sender, amount);
 
-        // Store bet in bet list.
         bets.push(Bet(
             {
                 amount: amount,
@@ -246,7 +185,6 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         Bet storage bet = bets[betId];
         uint amount = bet.amount;
         
-        // Validation checks.
         require(amount > 0, "Bet does not exist");
         require(bet.isSettled == false, "Bet is settled already");
 
@@ -264,18 +202,14 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
 
         if (outcome == 1 ) {
                 winAmount = possibleWinAmount;
-            } else { // do nothing 
-        }
+            } // else { do nothing }
 
-        // Unlock possibleWinAmount from lockedInBets, regardless of the outcome.
         lockedInBets -= possibleWinAmount;
 
-        // Update bet records
         bet.isSettled = true;
         bet.winAmount = winAmount;
-        bet.outcome = outcome; // 0, not set, 1 =
+        bet.outcome = outcome;
 
-        // Send prize to winner, add ROLL reward to loser, and update house profit.
         if (winAmount > 0) {
             houseProfit -= int(winAmount - amount);
             IERC20(token).safeTransfer(bet.gambler, winAmount);
@@ -283,7 +217,6 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
             houseProfit += int(amount);
         }
         
-        // Record bet settlement in event log.
         emit BetSettled(betId, gambler, amount, outcome, winAmount);
     }
 
@@ -292,24 +225,18 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         Bet storage bet = bets[betId];
         uint amount = bet.amount;
 
-        // Validation checks
         require(amount > 0, "Bet does not exist");
         require(bet.isSettled == false, "Bet is settled already");
         require(block.number > bet.placeBlockNumber + waitBlockRequest, "Wait before requesting refund");
 
         uint possibleWinAmount = getWinAmount(amount);
 
-        // Unlock possibleWinAmount from lockedInBets, regardless of the outcome.
         lockedInBets -= possibleWinAmount;
 
-        // Update bet records
         bet.isSettled = true;
         bet.winAmount = amount;
-
-        // Send the refund.
         IERC20(token).safeTransfer(bet.gambler, amount);
 
-        // Record refund in event logs
         emit BetRefunded(betId, bet.gambler, amount);
     }
 
@@ -322,30 +249,26 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
         create();
     }
 
+    // Dummy ERC20 （＾O＾）
     function create() public {
         dummyERC20 = new ERC20("DummyERC20", "XYZ");
         token = address(dummyERC20);
     }
 
-    function mintToken(uint _amount) public {
+    // create to mint additional tokens for further testing.
+    function mintToken(uint _amount) external {
         dummyERC20._mint(msg.sender, _amount);
         }
 
-    function mintTokenToContract(uint _amount) public {
+    // created to mint additional token to contract for further testing.
+    function mintTokenToContract(uint _amount) external {
         dummyERC20._mint(address(this), _amount);
         }
 
-    // Chainlink function
-    
+    // Chainlink callback function
     function fulfillRandomWords( uint256 _requestId, uint256[] memory _randomWords) internal override {
     settleBet(_requestId, _randomWords[0]);
     }
-
-
-    function zSelfDestruct() public onlyOwner {
-        selfdestruct(payable(msg.sender));
-    }
-
     
 }
 
