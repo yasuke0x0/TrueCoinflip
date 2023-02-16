@@ -15,7 +15,6 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // Chainlink variables START (´・ω・｀)
-
     VRFCoordinatorV2Interface COORDINATOR;
     uint64 s_subscriptionId;
     uint256[] public requestIds;
@@ -23,7 +22,6 @@ contract TrueCoinflip is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     uint32 public callbackGasLimit = 250000;
     uint32 numWords = 1;
     uint16 requestConfirmations = 3;
-
     // Chainlink variables END (´・ω・｀)
 
 
