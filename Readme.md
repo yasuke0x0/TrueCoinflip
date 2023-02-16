@@ -2,6 +2,9 @@
 
 A simple casino game based on the Ethereum blockchain, featuring a Solidity smart contract (CoinFlip.sol) and a web-based interface for interaction.
 
+![screenshot](screenshot.png)
+
+
 ## Inspiration
 Inspired by the [2017 Ethereum Coinflip](https://github.com/mariopino/ethereum-coinflip/) and helped with [2021 Polyroll](https://github.com/polyroll/polyroll-game-v2).
 
